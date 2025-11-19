@@ -20,6 +20,11 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.assignmentsixq3.ui.theme.AssignmentSixQ3Theme
 
+
+/**
+ * The main entry point of the application.
+ * It's responsible for handling user permissions and displaying the UI.
+ */
 class MainActivity : ComponentActivity() {
 
     private val soundViewModel: SoundViewModel by viewModels()
@@ -45,6 +50,10 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * Checks for the RECORD_AUDIO permission. If granted, it starts recording.
+     * If not, it launches the permission request dialog.
+     */
     private fun requestAudioPermission() {
         when (PackageManager.PERMISSION_GRANTED) {
             ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) -> {
@@ -56,16 +65,27 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * Lifecycle method called when the activity is no longer visible.
+     * We stop recording here to save battery and release the microphone.
+     */
     override fun onStop() {
         super.onStop()
         soundViewModel.stopRecording()
     }
 }
 
+
+/**
+ * The main Composable function that defines the UI for the sound meter screen.
+ */
 @Composable
 fun SoundMeterScreen(soundViewModel: SoundViewModel, onStartRecording: () -> Unit) {
+    // Observe the state values from the ViewModel.
     val decibels by soundViewModel.decibel
     val isRecording by soundViewModel.isRecording
+    // Enforce a minimum value of 0.0 for the UI display.
+    val displayDecibels = decibels.coerceAtLeast(0.0)
     val noiseThreshold = 85.0
 
     Column(
@@ -81,19 +101,20 @@ fun SoundMeterScreen(soundViewModel: SoundViewModel, onStartRecording: () -> Uni
         )
         Spacer(modifier = Modifier.height(32.dp))
 
-        SoundLevelIndicator(decibels = decibels, threshold = noiseThreshold)
+        SoundLevelIndicator(decibels = displayDecibels, threshold = noiseThreshold)
 
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "%.2f dB".format(decibels),
+            text = "%.2f dB".format(displayDecibels),
             fontSize = 28.sp,
-            color = if (decibels > noiseThreshold) Color.Red else MaterialTheme.colorScheme.onSurface
+            // Change color to red if the noise level exceeds the threshold.
+            color = if (displayDecibels > noiseThreshold) Color.Red else MaterialTheme.colorScheme.onSurface
         )
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        if (decibels > noiseThreshold) {
+        if (displayDecibels > noiseThreshold && isRecording) {
             Text(
                 text = "Alert: Noise level is too high!",
                 color = Color.Red,
@@ -115,12 +136,16 @@ fun SoundMeterScreen(soundViewModel: SoundViewModel, onStartRecording: () -> Uni
     }
 }
 
+/**
+ * A Composable that displays a visual progress bar representing the sound level.
+ */
 @Composable
 fun SoundLevelIndicator(decibels: Double, threshold: Double) {
-    val progress = (decibels / 120).toFloat().coerceIn(0f, 1f) // Assuming max 120 dB
+    // Map the [0, 120] dB range to a [0, 1] progress value.
+    val progress = (decibels / 120).toFloat().coerceIn(0f, 1f)
     val color = when {
         decibels > threshold -> Color.Red
-        decibels > threshold * 0.7 -> Color.Yellow
+        decibels > threshold * 0.8 -> Color.Yellow // A reasonable range for "getting loud"
         else -> Color.Green
     }
 
@@ -133,6 +158,13 @@ fun SoundLevelIndicator(decibels: Double, threshold: Double) {
             color = color,
             trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
         )
-        Text(text = "0 dB", modifier = Modifier.align(Alignment.Start))
+        // Add labels for the progress bar range
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(text = "0 dB")
+            Text(text = "120 dB")
+        }
     }
 }
