@@ -47,26 +47,20 @@ class SoundViewModel : ViewModel() {
             while (isRecording.value) {
                 val readSize = audioRecord?.read(buffer, 0, buffer.size) ?: 0
                 if (readSize > 0) {
-                    // Calculate the Root Mean Square (RMS) of the audio buffer
                     var sum = 0.0
                     for (i in 0 until readSize) {
                         sum += buffer[i].toDouble() * buffer[i].toDouble()
                     }
                     val rms = sqrt(sum / readSize)
 
-                    // Reference amplitude for 16-bit audio
                     val referenceAmplitude = 32767.0
 
-                    // Calculate decibels (dBFS). The result is negative.
-                    // Ensure division is floating-point by using a Double.
                     val dbValue = if (rms > 0) {
                         20 * log10(rms / referenceAmplitude)
                     } else {
                         -120.0 // A floor value for silence
                     }
 
-                    // Shift the range from [-120, 0] to [0, 120] for a more
-                    // user-friendly display in the UI.
                     decibel.value = dbValue + 80.0
                 }
             }
